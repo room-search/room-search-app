@@ -4,6 +4,16 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val releaseStoreFileEnv: String? = System.getenv("RELEASE_STORE_FILE")
+val releaseStorePasswordEnv: String? = System.getenv("RELEASE_STORE_PASSWORD")
+val releaseKeyAliasEnv: String? = System.getenv("RELEASE_KEY_ALIAS")
+val releaseKeyPasswordEnv: String? = System.getenv("RELEASE_KEY_PASSWORD")
+val hasReleaseKeystore: Boolean =
+    !releaseStoreFileEnv.isNullOrBlank() &&
+    !releaseStorePasswordEnv.isNullOrBlank() &&
+    !releaseKeyAliasEnv.isNullOrBlank() &&
+    !releaseKeyPasswordEnv.isNullOrBlank()
+
 android {
     namespace = "dev.roomsearch.room_search"
     compileSdk = 36
@@ -27,9 +37,24 @@ android {
         multiDexEnabled = true
     }
 
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            create("release") {
+                storeFile = file(releaseStoreFileEnv!!)
+                storePassword = releaseStorePasswordEnv
+                keyAlias = releaseKeyAliasEnv
+                keyPassword = releaseKeyPasswordEnv
+            }
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseKeystore) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             isMinifyEnabled = false
             isShrinkResources = false
         }

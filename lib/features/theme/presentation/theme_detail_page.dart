@@ -1,6 +1,3 @@
-import 'dart:ui' as ui;
-
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +8,7 @@ import '../../../shared/widgets/cached_theme_image.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/favorite_heart_button.dart';
 import '../../../shared/widgets/grade_badge.dart';
+import '../../../shared/widgets/review_attribution.dart';
 import '../../../shared/widgets/score_bar.dart';
 import '../../../shared/widgets/theme_poster_card.dart';
 import '../../cafe/application/cafe_detail_controller.dart';
@@ -54,7 +52,7 @@ class _LoadingScaffold extends StatelessWidget {
     return Stack(
       children: [
         if (heroPhotoUrl != null)
-          _PosterHeader(photoUrl: heroPhotoUrl!, refId: refId),
+          _LoadingPoster(photoUrl: heroPhotoUrl!, refId: refId),
         const Positioned.fill(child: Center(child: CircularProgressIndicator())),
         Positioned(
           left: 8,
@@ -66,81 +64,174 @@ class _LoadingScaffold extends StatelessWidget {
   }
 }
 
+/// Compact header: vertical poster on the left, title + chips on the right.
 class _PosterHeader extends StatelessWidget {
-  const _PosterHeader({required this.photoUrl, required this.refId});
-
-  final String photoUrl;
-  final int refId;
-
-  static const double _height = 420;
+  const _PosterHeader({required this.theme});
+  final EscapeTheme theme;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return SizedBox(
-      height: _height,
-      width: double.infinity,
-      child: Stack(
-        fit: StackFit.expand,
+    final text = Theme.of(context).textTheme;
+    final mq = MediaQuery.of(context);
+    final grade = cleanGrade(theme.review?.satisfy);
+    final difficulty = theme.review?.difficulty;
+
+    final posterWidth = (mq.size.width * 0.34).clamp(120.0, 160.0);
+    final posterHeight = posterWidth * 3 / 2;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, mq.padding.top + 56, 20, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Blurred background poster for ambience
-          if (photoUrl.isNotEmpty)
-            ImageFiltered(
-              imageFilter: ui.ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-              child: CachedNetworkImage(
-                imageUrl: photoUrl,
-                fit: BoxFit.cover,
-              ),
-            )
-          else
-            Container(color: scheme.primary.withValues(alpha: 0.15)),
-          // Scrim for readability
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  scheme.surface.withValues(alpha: 0.25),
-                  scheme.surface.withValues(alpha: 0.6),
-                  scheme.surface,
-                ],
-                stops: const [0, 0.72, 1],
-              ),
-            ),
+          _PosterImage(
+            photoUrl: theme.photoUrl,
+            refId: theme.refId,
+            width: posterWidth,
+            height: posterHeight,
           ),
-          // Centered portrait poster
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(48, 56, 48, 40),
-              child: Hero(
-                tag: 'theme-photo-$refId',
-                child: AspectRatio(
-                  aspectRatio: 2 / 3,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.28),
-                          blurRadius: 32,
-                          offset: const Offset(0, 14),
-                        ),
-                      ],
-                    ),
-                    child: CachedThemeImage(
-                      url: photoUrl,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (grade.isNotEmpty) ...[
+                  GradeBadge(grade: grade),
+                  const SizedBox(height: 8),
+                ],
+                Text(
+                  theme.name,
+                  style: text.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    height: 1.22,
                   ),
+                )
+                    .animate()
+                    .fadeIn(duration: 260.ms)
+                    .slideY(begin: 0.08, end: 0, duration: 260.ms),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _metaChip(context, Icons.timer_outlined,
+                        formatPlaytime(theme.playtime)),
+                    _metaChip(context, Icons.payments_outlined,
+                        formatPriceWon(theme.price)),
+                    _metaChip(
+                      context,
+                      theme.isOpen
+                          ? Icons.check_circle_rounded
+                          : Icons.pause_circle_outline,
+                      theme.isOpen ? '영업중' : '휴업',
+                      colored: theme.isOpen,
+                    ),
+                    if (difficulty != null && difficulty.isNotEmpty)
+                      _metaChip(context, Icons.psychology_alt_outlined,
+                          '체감 $difficulty'),
+                  ],
                 ),
-              ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
+}
+
+/// Loading-state placeholder that keeps the same poster slot for the Hero flight.
+class _LoadingPoster extends StatelessWidget {
+  const _LoadingPoster({required this.photoUrl, required this.refId});
+  final String photoUrl;
+  final int refId;
+
+  @override
+  Widget build(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    final posterWidth = (mq.size.width * 0.34).clamp(120.0, 160.0);
+    final posterHeight = posterWidth * 3 / 2;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, mq.padding.top + 56, 20, 12),
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: _PosterImage(
+          photoUrl: photoUrl,
+          refId: refId,
+          width: posterWidth,
+          height: posterHeight,
+        ),
+      ),
+    );
+  }
+}
+
+class _PosterImage extends StatelessWidget {
+  const _PosterImage({
+    required this.photoUrl,
+    required this.refId,
+    required this.width,
+    required this.height,
+  });
+
+  final String photoUrl;
+  final int refId;
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Hero(
+        tag: 'theme-photo-$refId',
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.20),
+                blurRadius: 26,
+                spreadRadius: -4,
+                offset: const Offset(0, 14),
+              ),
+            ],
+          ),
+          child: CachedThemeImage(
+            url: photoUrl,
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Widget _metaChip(BuildContext context, IconData icon, String label,
+    {bool colored = false}) {
+  final scheme = Theme.of(context).colorScheme;
+  final bg = colored
+      ? scheme.tertiary.withValues(alpha: 0.16)
+      : scheme.surfaceContainerHighest;
+  final fg =
+      colored ? scheme.tertiary : scheme.onSurface.withValues(alpha: 0.8);
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+    decoration: BoxDecoration(
+      color: bg,
+      borderRadius: BorderRadius.circular(999),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: fg),
+        const SizedBox(width: 4),
+        Text(label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: fg)),
+      ],
+    ),
+  );
 }
 
 class _Loaded extends ConsumerWidget {
@@ -155,71 +246,27 @@ class _Loaded extends ConsumerWidget {
     ref.watch(themeFavoritesChangedProvider);
     final isFav = repo.isThemeFavorite(theme.refId);
     final review = theme.review;
-    final grade = cleanGrade(review?.satisfy);
 
     return Stack(
       children: [
         CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(
-              child: _PosterHeader(photoUrl: theme.photoUrl, refId: theme.refId),
-            ),
+            SliverToBoxAdapter(child: _PosterHeader(theme: theme)),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        if (grade.isNotEmpty) ...[
-                          GradeBadge(grade: grade),
-                          const SizedBox(width: 8),
-                        ],
-                        Expanded(
-                          child: Text(theme.name, style: text.headlineLarge),
-                        ),
-                      ],
-                    )
-                        .animate()
-                        .fadeIn(duration: 260.ms)
-                        .slideY(begin: 0.1, end: 0, duration: 260.ms),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: [
-                        _chip(context, Icons.timer_outlined,
-                            formatPlaytime(theme.playtime)),
-                        _chip(context, Icons.payments_outlined,
-                            formatPriceWon(theme.price)),
-                        _chip(
-                          context,
-                          theme.isOpen
-                              ? Icons.check_circle_rounded
-                              : Icons.pause_circle_outline,
-                          theme.isOpen ? '영업중' : '휴업',
-                          colored: theme.isOpen,
-                        ),
-                        if (review?.difficulty != null &&
-                            review!.difficulty!.isNotEmpty)
-                          _chip(
-                            context,
-                            Icons.psychology_alt_outlined,
-                            '체감 난이도 ${review.difficulty!}',
-                          ),
-                      ],
-                    ),
                     if (theme.description.isNotEmpty) ...[
-                      const SizedBox(height: 20),
                       Text(
                         theme.description,
                         style: text.bodyLarge?.copyWith(
                           color: scheme.onSurface.withValues(alpha: 0.82),
                         ),
                       ),
+                      const SizedBox(height: 28),
                     ],
-                    const SizedBox(height: 28),
                     Text('점수', style: text.titleLarge),
                     const SizedBox(height: 8),
                     Center(child: ScoreRadarChart(scores: theme.scoreMap)),
@@ -285,30 +332,6 @@ class _Loaded extends ConsumerWidget {
     ];
   }
 
-  Widget _chip(BuildContext context, IconData icon, String text,
-      {bool colored = false}) {
-    final scheme = Theme.of(context).colorScheme;
-    final bg = colored
-        ? scheme.tertiary.withValues(alpha: 0.16)
-        : scheme.surfaceContainerHighest;
-    final fg = colored ? scheme.tertiary : scheme.onSurface.withValues(alpha: 0.8);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: fg),
-          const SizedBox(width: 4),
-          Text(text,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(color: fg)),
-        ],
-      ),
-    );
-  }
 }
 
 class _ReviewSection extends StatelessWidget {
@@ -334,7 +357,18 @@ class _ReviewSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 28),
-        Text('리뷰 요약', style: text.titleLarge),
+        Row(
+          children: [
+            Text('리뷰 요약', style: text.titleLarge),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: ReviewAttribution(),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.all(16),

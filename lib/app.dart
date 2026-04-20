@@ -4,12 +4,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/update/update_controller.dart';
+import 'shared/widgets/update_banner.dart';
 
-class RoomSearchApp extends ConsumerWidget {
+class RoomSearchApp extends ConsumerStatefulWidget {
   const RoomSearchApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RoomSearchApp> createState() => _RoomSearchAppState();
+}
+
+class _RoomSearchAppState extends ConsumerState<RoomSearchApp> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(updateControllerProvider.notifier).check();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
     return MaterialApp.router(
       title: '방서치',
@@ -25,6 +40,7 @@ class RoomSearchApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       routerConfig: router,
+      builder: (context, child) => UpdateOverlay(child: child ?? const SizedBox.shrink()),
     );
   }
 }

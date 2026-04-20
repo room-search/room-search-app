@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/utils/debouncer.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/review_attribution.dart';
 import '../application/theme_search_controller.dart';
 import '../data/models/theme_search_query.dart';
 import 'widgets/sort_option.dart';
@@ -149,15 +150,17 @@ class _ThemeSearchPageState extends ConsumerState<ThemeSearchPage> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
             child: Row(
               children: [
-                Expanded(
-                  child: Text(
-                    state.page.totalElements > 0
-                        ? '전체 ${state.page.totalElements}개'
-                        : '',
+                if (state.page.totalElements > 0) ...[
+                  Text(
+                    '전체 ${state.page.totalElements}개',
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
                           color: scheme.onSurface.withValues(alpha: 0.65),
                         ),
                   ),
+                  const SizedBox(width: 10),
+                ],
+                const Expanded(
+                  child: ReviewAttribution(compact: true),
                 ),
                 TextButton.icon(
                   onPressed: _openSortSheet,

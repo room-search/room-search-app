@@ -48,6 +48,11 @@ dependencies:
   collection: ^1.19.1
   path_provider: ^2.1.5
 
+  # Update / install
+  package_info_plus: ^8.1.2
+  open_filex: ^4.5.0
+  permission_handler: ^11.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
