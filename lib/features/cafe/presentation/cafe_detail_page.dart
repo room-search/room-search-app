@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/share/kakao_share_service.dart';
 import '../../../shared/widgets/empty_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/favorite_heart_button.dart';
@@ -22,7 +23,20 @@ class CafeDetailPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(cafeDetailProvider(id));
     return Scaffold(
-      appBar: AppBar(title: const Text('카페')),
+      appBar: AppBar(
+        title: const Text('카페'),
+        actions: [
+          async.maybeWhen(
+            data: (cafe) => IconButton(
+              icon: const Icon(Icons.share_rounded),
+              tooltip: '공유',
+              onPressed: () =>
+                  ref.read(kakaoShareServiceProvider).shareCafe(cafe),
+            ),
+            orElse: () => const SizedBox.shrink(),
+          ),
+        ],
+      ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => ErrorView(

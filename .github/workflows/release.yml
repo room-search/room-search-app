@@ -64,6 +64,14 @@ jobs:
             echo "present=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Resolve share env
+        id: share_env
+        env:
+          LANDING_BASE_URL_VAR: ${{ vars.LANDING_BASE_URL }}
+        run: |
+          LANDING="${LANDING_BASE_URL_VAR:-https://room-search.github.io}"
+          echo "landing=$LANDING" >> "$GITHUB_OUTPUT"
+
       - name: Build signed APK
         if: steps.keystore.outputs.present == 'true'
         env:
@@ -71,17 +79,30 @@ jobs:
           RELEASE_STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KAKAO_NATIVE_APP_KEY: ${{ secrets.KAKAO_NATIVE_APP_KEY }}
+          LANDING_BASE_URL: ${{ steps.share_env.outputs.landing }}
+          APP_SCHEME: roomsearch
         run: |
           flutter build apk --release \
             --build-name=${{ steps.tag.outputs.version }} \
-            --build-number=${{ github.run_number }}
+            --build-number=${{ github.run_number }} \
+            --dart-define=KAKAO_NATIVE_APP_KEY="$KAKAO_NATIVE_APP_KEY" \
+            --dart-define=LANDING_BASE_URL="$LANDING_BASE_URL" \
+            --dart-define=APP_SCHEME="$APP_SCHEME"
 
       - name: Build debug-signed APK (fallback)
         if: steps.keystore.outputs.present == 'false'
+        env:
+          KAKAO_NATIVE_APP_KEY: ${{ secrets.KAKAO_NATIVE_APP_KEY }}
+          LANDING_BASE_URL: ${{ steps.share_env.outputs.landing }}
+          APP_SCHEME: roomsearch
         run: |
           flutter build apk --release \
             --build-name=${{ steps.tag.outputs.version }} \
-            --build-number=${{ github.run_number }}
+            --build-number=${{ github.run_number }} \
+            --dart-define=KAKAO_NATIVE_APP_KEY="$KAKAO_NATIVE_APP_KEY" \
+            --dart-define=LANDING_BASE_URL="$LANDING_BASE_URL" \
+            --dart-define=APP_SCHEME="$APP_SCHEME"
 
       - name: Rename artifact
         run: |

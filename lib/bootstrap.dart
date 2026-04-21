@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:kakao_flutter_sdk_share/kakao_flutter_sdk_share.dart';
 
 import 'app.dart';
 import 'core/config/env.dart';
@@ -21,6 +22,12 @@ Future<void> bootstrap() async {
 
     await Hive.initFlutter();
     final favoriteRepo = await FavoriteRepository.open();
+
+    if (Env.isKakaoShareEnabled) {
+      KakaoSdk.init(nativeAppKey: Env.kakaoNativeAppKey);
+    } else {
+      log.w('Kakao share disabled: KAKAO_NATIVE_APP_KEY not provided');
+    }
 
     try {
       await FlutterNaverMap().init(

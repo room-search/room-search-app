@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/formatters.dart';
+import '../../../core/share/kakao_share_service.dart';
 import '../../../shared/widgets/cached_theme_image.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/favorite_heart_button.dart';
@@ -307,12 +308,25 @@ class _Loaded extends ConsumerWidget {
         Positioned(
           right: 4,
           top: MediaQuery.of(context).padding.top + 4,
-          child: _GlassCircle(
-            child: FavoriteHeartButton(
-              isFavorite: isFav,
-              size: 22,
-              onTap: () => repo.toggleTheme(theme),
-            ),
+          child: Row(
+            children: [
+              _GlassCircle(
+                child: IconButton(
+                  icon: const Icon(Icons.share_rounded, size: 20),
+                  tooltip: '공유',
+                  onPressed: () => ref
+                      .read(kakaoShareServiceProvider)
+                      .shareTheme(theme),
+                ),
+              ),
+              _GlassCircle(
+                child: FavoriteHeartButton(
+                  isFavorite: isFav,
+                  size: 22,
+                  onTap: () => repo.toggleTheme(theme),
+                ),
+              ),
+            ],
           ),
         ),
       ],

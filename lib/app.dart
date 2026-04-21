@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/deeplink/deep_link_service.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/update/update_controller.dart';
@@ -20,6 +21,7 @@ class _RoomSearchAppState extends ConsumerState<RoomSearchApp> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(updateControllerProvider.notifier).check();
+      ref.read(deepLinkServiceProvider).start(ref.read(appRouterProvider));
     });
   }
 

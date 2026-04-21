@@ -48,3 +48,6 @@ app.*.map.json
 .omc
 
 release.jks
+
+# Local dart-define secrets (copy env.example.json → env.json)
+env.json
