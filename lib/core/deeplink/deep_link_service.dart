@@ -37,7 +37,11 @@ class DeepLinkService {
   }
 
   void _handle(GoRouter router, Uri uri) {
-    if (uri.scheme != Env.appScheme) return;
+    final isOurScheme = uri.scheme == Env.appScheme;
+    final isKakaoScheme =
+        Env.isKakaoShareEnabled &&
+        uri.scheme == 'kakao${Env.kakaoNativeAppKey}';
+    if (!isOurScheme && !isKakaoScheme) return;
     final route = _resolve(uri);
     if (route != null) {
       router.push(route);

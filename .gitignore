@@ -51,3 +51,6 @@ release.jks
 
 # Local dart-define secrets (copy env.example.json → env.json)
 env.json
+
+# iOS Kakao native app key (copy ios/Flutter/Kakao.example.xcconfig → Kakao.xcconfig)
+ios/Flutter/Kakao.xcconfig

@@ -1,0 +1,4 @@
+// Copy this file to `Kakao.xcconfig` and fill in the real value.
+// Kakao.xcconfig is gitignored. Local dev: edit manually.
+// CI: generate from `KAKAO_NATIVE_APP_KEY` secret.
+KAKAO_NATIVE_APP_KEY =

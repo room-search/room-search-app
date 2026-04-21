@@ -55,6 +55,21 @@ class FinderIntroPage extends ConsumerWidget {
                     delay: 240.ms,
                   ),
             ),
+            const SizedBox(height: 14),
+            Expanded(
+              child: _ModeCard(
+                title: '함께 찾기',
+                subtitle: '같은 Wi-Fi의 친구와\n방을 만들어 테마를 공유해요',
+                icon: Icons.group_rounded,
+                onTap: () => context.push('/finder/room'),
+                gradient: const [Color(0xFF16C5A1), Color(0xFF40A3F0)],
+              ).animate().fadeIn(duration: 350.ms, delay: 320.ms).slideY(
+                    begin: 0.1,
+                    end: 0,
+                    duration: 320.ms,
+                    delay: 320.ms,
+                  ),
+            ),
           ],
         ),
       ),

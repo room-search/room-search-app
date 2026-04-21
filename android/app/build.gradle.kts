@@ -35,6 +35,12 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
+
+        val kakaoNativeAppKey: String =
+            (project.findProperty("kakao.native.app.key") as? String)
+                ?: System.getenv("KAKAO_NATIVE_APP_KEY")
+                ?: ""
+        manifestPlaceholders["kakaoNativeAppKey"] = kakaoNativeAppKey
     }
 
     signingConfigs {

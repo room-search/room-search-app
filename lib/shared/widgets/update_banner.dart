@@ -193,79 +193,11 @@ class _CloudContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Material(
-      color: Colors.transparent,
-      child: CustomPaint(
-        painter: _CloudPainter(
-          color: theme.colorScheme.primary,
-          shadow: Colors.black.withValues(alpha: 0.18),
-        ),
-        child: child,
-      ),
+      color: theme.colorScheme.primary,
+      borderRadius: BorderRadius.circular(18),
+      elevation: 6,
+      shadowColor: Colors.black.withValues(alpha: 0.18),
+      child: child,
     );
   }
-}
-
-class _CloudPainter extends CustomPainter {
-  _CloudPainter({required this.color, required this.shadow});
-
-  final Color color;
-  final Color shadow;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final path = _buildCloud(size);
-    canvas.drawShadow(path, shadow, 6, false);
-    final paint = Paint()..color = color;
-    canvas.drawPath(path, paint);
-  }
-
-  Path _buildCloud(Size size) {
-    final w = size.width;
-    final h = size.height;
-    final bodyTop = h * 0.28;
-    final radius = 18.0;
-
-    final path = Path()
-      ..moveTo(radius, bodyTop)
-      ..arcToPoint(Offset(radius * 2, bodyTop - radius),
-          radius: Radius.circular(radius), clockwise: true);
-
-    final bumps = [
-      Offset(w * 0.18, bodyTop),
-      Offset(w * 0.42, bodyTop),
-      Offset(w * 0.68, bodyTop),
-      Offset(w * 0.88, bodyTop),
-    ];
-    final bumpRadii = [16.0, 22.0, 20.0, 14.0];
-    for (var i = 0; i < bumps.length; i++) {
-      final c = bumps[i];
-      final r = bumpRadii[i];
-      path.arcToPoint(
-        Offset(c.dx + r, c.dy),
-        radius: Radius.circular(r),
-        clockwise: true,
-      );
-      if (i < bumps.length - 1) {
-        path.lineTo(bumps[i + 1].dx - bumpRadii[i + 1], bumps[i + 1].dy);
-      }
-    }
-    path.lineTo(w - radius, bodyTop);
-    path.arcToPoint(Offset(w, bodyTop + radius),
-        radius: Radius.circular(radius), clockwise: true);
-    path.lineTo(w, h - radius);
-    path.arcToPoint(Offset(w - radius, h),
-        radius: Radius.circular(radius), clockwise: true);
-    path.lineTo(radius, h);
-    path.arcToPoint(Offset(0, h - radius),
-        radius: Radius.circular(radius), clockwise: true);
-    path.lineTo(0, bodyTop + radius);
-    path.arcToPoint(Offset(radius, bodyTop),
-        radius: Radius.circular(radius), clockwise: true);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldRepaint(covariant _CloudPainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.shadow != shadow;
 }

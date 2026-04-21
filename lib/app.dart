@@ -6,6 +6,7 @@ import 'core/deeplink/deep_link_service.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/update/update_controller.dart';
+import 'features/room/presentation/widgets/room_notification_overlay.dart';
 import 'shared/widgets/update_banner.dart';
 
 class RoomSearchApp extends ConsumerStatefulWidget {
@@ -42,7 +43,15 @@ class _RoomSearchAppState extends ConsumerState<RoomSearchApp> {
         GlobalCupertinoLocalizations.delegate,
       ],
       routerConfig: router,
-      builder: (context, child) => UpdateOverlay(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => Overlay(
+        initialEntries: [
+          OverlayEntry(
+            builder: (_) => RoomNotificationOverlay(
+              child: UpdateOverlay(child: child ?? const SizedBox.shrink()),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

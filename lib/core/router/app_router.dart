@@ -11,6 +11,7 @@ import '../../features/finder/presentation/finder_intro_page.dart';
 import '../../features/finder/presentation/results/finder_results_page.dart';
 import '../../features/finder/presentation/wizard/wizard_page.dart';
 import '../../features/home/presentation/home_shell.dart';
+import '../../features/room/presentation/room_search_page.dart';
 import '../../features/theme/presentation/theme_detail_page.dart';
 import '../../features/theme/presentation/theme_search_page.dart';
 
@@ -98,6 +99,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     path: 'results',
                     name: 'finder-results',
                     builder: (ctx, state) => const FinderResultsPage(),
+                  ),
+                  GoRoute(
+                    path: 'room',
+                    name: 'finder-room',
+                    builder: (ctx, state) => const RoomSearchPage(),
                   ),
                 ],
               ),

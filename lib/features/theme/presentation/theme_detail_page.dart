@@ -14,6 +14,7 @@ import '../../../shared/widgets/score_bar.dart';
 import '../../../shared/widgets/theme_poster_card.dart';
 import '../../cafe/application/cafe_detail_controller.dart';
 import '../../favorites/data/favorite_repository.dart';
+import '../../room/application/room_controller.dart';
 import '../application/theme_detail_controller.dart';
 import '../data/models/theme.dart';
 import '../data/models/theme_review.dart';
@@ -310,6 +311,7 @@ class _Loaded extends ConsumerWidget {
           top: MediaQuery.of(context).padding.top + 4,
           child: Row(
             children: [
+              _RoomShareButton(theme: theme),
               _GlassCircle(
                 child: IconButton(
                   icon: const Icon(Icons.share_rounded, size: 20),
@@ -634,6 +636,40 @@ class _GlassCircle extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: child,
+    );
+  }
+}
+
+class _RoomShareButton extends ConsumerWidget {
+  const _RoomShareButton({required this.theme});
+
+  final EscapeTheme theme;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final canShare =
+        ref.watch(roomControllerProvider.select((s) => s.canShare));
+    if (!canShare) return const SizedBox.shrink();
+    return _GlassCircle(
+      child: IconButton(
+        icon: const Icon(Icons.group_add_rounded, size: 20),
+        tooltip: '방에 공유',
+        onPressed: () {
+          ref.read(roomControllerProvider.notifier).shareTheme(
+                themeRefId: theme.refId,
+                themeName: theme.name,
+                photoUrl: theme.photoUrl,
+              );
+          final messenger = ScaffoldMessenger.maybeOf(context);
+          messenger?.showSnackBar(
+            SnackBar(
+              content: Text('"${theme.name}" 방에 공유했어요'),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        },
+      ),
     );
   }
 }
