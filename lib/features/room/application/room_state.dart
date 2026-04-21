@@ -2,17 +2,21 @@ import '../data/room_participant.dart';
 
 enum RoomPhase { idle, searching, locked, error }
 
+enum RoomBannerKind { share, leave }
+
 class RoomShareNotification {
   const RoomShareNotification({
+    this.kind = RoomBannerKind.share,
     required this.id,
     required this.fromId,
     required this.fromName,
-    required this.themeRefId,
-    required this.themeName,
+    this.themeRefId = 0,
+    this.themeName = '',
     this.photoUrl,
     required this.receivedAt,
   });
 
+  final RoomBannerKind kind;
   final String id;
   final String fromId;
   final String fromName;

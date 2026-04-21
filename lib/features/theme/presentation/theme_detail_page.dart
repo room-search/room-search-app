@@ -663,7 +663,7 @@ class _RoomShareButton extends ConsumerWidget {
           final messenger = ScaffoldMessenger.maybeOf(context);
           messenger?.showSnackBar(
             SnackBar(
-              content: Text('"${theme.name}" 방에 공유했어요'),
+              content: Text('"${theme.name}" 테마를 방에 공유했어요'),
               duration: const Duration(seconds: 2),
               behavior: SnackBarBehavior.floating,
             ),

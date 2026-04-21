@@ -235,8 +235,24 @@ class RoomController extends Notifier<RoomState> {
 
   void _onServerRoster(List<RoomParticipant> roster) {
     if (!state.isHost) return;
+    _detectLeaves(_wsRoster, roster);
     _wsRoster = roster;
     _recomputeRoster();
+  }
+
+  void _detectLeaves(
+    List<RoomParticipant> previous,
+    List<RoomParticipant> current,
+  ) {
+    if (state.phase != RoomPhase.locked) return;
+    if (previous.isEmpty) return;
+    final currentIds = {for (final p in current) p.id};
+    for (final p in previous) {
+      if (p.id == state.selfId) continue;
+      if (!currentIds.contains(p.id)) {
+        _pushLeaveNotification(fromId: p.id, fromName: p.name);
+      }
+    }
   }
 
   void _onServerIncoming(HostIncoming ev) {
@@ -257,11 +273,13 @@ class RoomController extends Notifier<RoomState> {
   void _onClientIncoming(RoomMessage msg) {
     switch (msg.type) {
       case RoomMessageType.roster:
-        _wsRoster = msg.rosterParticipants();
+        final nextRoster = msg.rosterParticipants();
         if (msg.rosterLocked && state.phase == RoomPhase.searching) {
           unawaited(_discovery?.stop());
           state = state.copyWith(phase: RoomPhase.locked);
         }
+        _detectLeaves(_wsRoster, nextRoster);
+        _wsRoster = nextRoster;
         _recomputeRoster();
       case RoomMessageType.lock:
         unawaited(_discovery?.stop());
@@ -345,15 +363,35 @@ class RoomController extends Notifier<RoomState> {
     required String themeName,
     String? photoUrl,
   }) {
-    final notif = RoomShareNotification(
-      id: _uuid.v4(),
-      fromId: fromId,
-      fromName: fromName,
-      themeRefId: themeRefId,
-      themeName: themeName,
-      photoUrl: photoUrl,
-      receivedAt: DateTime.now(),
+    _emitNotification(
+      RoomShareNotification(
+        id: _uuid.v4(),
+        fromId: fromId,
+        fromName: fromName,
+        themeRefId: themeRefId,
+        themeName: themeName,
+        photoUrl: photoUrl,
+        receivedAt: DateTime.now(),
+      ),
     );
+  }
+
+  void _pushLeaveNotification({
+    required String fromId,
+    required String fromName,
+  }) {
+    _emitNotification(
+      RoomShareNotification(
+        kind: RoomBannerKind.leave,
+        id: _uuid.v4(),
+        fromId: fromId,
+        fromName: fromName,
+        receivedAt: DateTime.now(),
+      ),
+    );
+  }
+
+  void _emitNotification(RoomShareNotification notif) {
     state = state.copyWith(currentNotification: notif);
     _notificationTimer?.cancel();
     _notificationTimer = Timer(_notificationDuration, () {

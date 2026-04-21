@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../application/room_controller.dart';
+import '../../application/room_state.dart';
 
 class RoomNotificationOverlay extends ConsumerWidget {
   const RoomNotificationOverlay({super.key, required this.child});
@@ -29,15 +30,19 @@ class RoomNotificationOverlay extends ConsumerWidget {
             right: 12,
             child: _RoomBanner(
               key: ValueKey(notif.id),
-              fromName: notif.fromName,
-              themeName: notif.themeName,
-              photoUrl: notif.photoUrl,
+              notification: notif,
               onTap: () {
-                ref.read(roomControllerProvider.notifier).dismissNotification();
-                GoRouter.of(context).push(
-                  '/themes/${notif.themeRefId}',
-                  extra: notif.photoUrl,
-                );
+                final router = GoRouter.of(context);
+                ref
+                    .read(roomControllerProvider.notifier)
+                    .dismissNotification();
+                if (notif.kind == RoomBannerKind.share &&
+                    notif.themeRefId > 0) {
+                  router.push(
+                    '/themes/${notif.themeRefId}',
+                    extra: notif.photoUrl,
+                  );
+                }
               },
               onDismiss: () => ref
                   .read(roomControllerProvider.notifier)
@@ -52,43 +57,39 @@ class RoomNotificationOverlay extends ConsumerWidget {
 class _RoomBanner extends StatelessWidget {
   const _RoomBanner({
     super.key,
-    required this.fromName,
-    required this.themeName,
-    required this.photoUrl,
+    required this.notification,
     required this.onTap,
     required this.onDismiss,
   });
 
-  final String fromName;
-  final String themeName;
-  final String? photoUrl;
+  final RoomShareNotification notification;
   final VoidCallback onTap;
   final VoidCallback onDismiss;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isLeave = notification.kind == RoomBannerKind.leave;
+    final bg = isLeave
+        ? theme.colorScheme.surfaceContainerHighest
+        : theme.colorScheme.primary;
+    final fg = isLeave
+        ? theme.colorScheme.onSurface
+        : theme.colorScheme.onPrimary;
+
     return Material(
-      color: Colors.transparent,
+      color: bg,
+      borderRadius: BorderRadius.circular(18),
+      elevation: 6,
+      shadowColor: Colors.black.withValues(alpha: 0.4),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
-        child: Ink(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primary,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.18),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
+        child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
           child: Row(
             children: [
-              _Thumbnail(photoUrl: photoUrl),
+              _Leading(notification: notification, fg: fg),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -96,20 +97,19 @@ class _RoomBanner extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      '$fromName님이 공유',
+                      _titleText(notification),
                       style: theme.textTheme.labelMedium?.copyWith(
-                        color: theme.colorScheme.onPrimary
-                            .withValues(alpha: 0.85),
+                        color: fg.withValues(alpha: 0.85),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      themeName,
+                      _bodyText(notification),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleSmall?.copyWith(
-                        color: theme.colorScheme.onPrimary,
+                        color: fg,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -118,10 +118,7 @@ class _RoomBanner extends StatelessWidget {
               ),
               IconButton(
                 onPressed: onDismiss,
-                icon: Icon(
-                  Icons.close_rounded,
-                  color: theme.colorScheme.onPrimary,
-                ),
+                icon: Icon(Icons.close_rounded, color: fg),
                 tooltip: '닫기',
               ),
             ],
@@ -138,27 +135,65 @@ class _RoomBanner extends StatelessWidget {
         )
         .fadeIn(duration: 220.ms);
   }
+
+  String _titleText(RoomShareNotification n) {
+    switch (n.kind) {
+      case RoomBannerKind.share:
+        return '${n.fromName}님이 공유';
+      case RoomBannerKind.leave:
+        return '방 알림';
+    }
+  }
+
+  String _bodyText(RoomShareNotification n) {
+    switch (n.kind) {
+      case RoomBannerKind.share:
+        return n.themeName;
+      case RoomBannerKind.leave:
+        return '${n.fromName}님이 방에서 나갔어요';
+    }
+  }
 }
 
-class _Thumbnail extends StatelessWidget {
-  const _Thumbnail({required this.photoUrl});
+class _Leading extends StatelessWidget {
+  const _Leading({required this.notification, required this.fg});
 
-  final String? photoUrl;
+  final RoomShareNotification notification;
+  final Color fg;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    if (notification.kind == RoomBannerKind.leave) {
+      return Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: fg.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(Icons.logout_rounded, color: fg),
+      );
+    }
+    return _Thumbnail(photoUrl: notification.photoUrl, fg: fg);
+  }
+}
+
+class _Thumbnail extends StatelessWidget {
+  const _Thumbnail({required this.photoUrl, required this.fg});
+
+  final String? photoUrl;
+  final Color fg;
+
+  @override
+  Widget build(BuildContext context) {
     final fallback = Container(
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: theme.colorScheme.onPrimary.withValues(alpha: 0.18),
+        color: fg.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Icon(
-        Icons.casino_rounded,
-        color: theme.colorScheme.onPrimary,
-      ),
+      child: Icon(Icons.casino_rounded, color: fg),
     );
     final url = photoUrl;
     if (url == null || url.isEmpty) return fallback;
