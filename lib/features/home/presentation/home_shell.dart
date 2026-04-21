@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class HomeShell extends StatelessWidget {
+import '../../room/application/room_controller.dart';
+
+class HomeShell extends ConsumerWidget {
   const HomeShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
+
+  static const int _finderIndex = 2;
 
   static const _tabs = <_TabSpec>[
     _TabSpec('테마', Icons.casino_outlined, Icons.casino_rounded),
@@ -21,16 +26,34 @@ class HomeShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: navigationShell,
-      bottomNavigationBar: NavigationBar(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final roomActive =
+        ref.watch(roomControllerProvider.select((s) => s.isActive));
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final confirmed = await _confirmExit(context);
+        if (confirmed == true) {
+          await SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        body: navigationShell,
+        bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: _onTap,
         destinations: [
           for (var i = 0; i < _tabs.length; i++)
             NavigationDestination(
-              icon: Icon(_tabs[i].iconOutlined),
+              icon: _buildIcon(
+                context,
+                iconData: _tabs[i].iconOutlined,
+                highlighted: i == _finderIndex && roomActive,
+                color: theme.colorScheme.primary,
+              ),
               selectedIcon: Icon(_tabs[i].iconFilled)
                   .animate()
                   .scale(
@@ -42,6 +65,45 @@ class HomeShell extends StatelessWidget {
               label: _tabs[i].label,
             ),
         ],
+      ),
+      ),
+    );
+  }
+
+  Future<bool?> _confirmExit(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('앱 종료'),
+        content: const Text('방서치를 종료할까요?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('종료'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIcon(
+    BuildContext context, {
+    required IconData iconData,
+    required bool highlighted,
+    required Color color,
+  }) {
+    if (!highlighted) return Icon(iconData);
+    return Badge(
+      backgroundColor: color,
+      smallSize: 8,
+      child: Icon(
+        // use filled variant to emphasize active state
+        Icons.auto_awesome_rounded,
+        color: color,
       ),
     );
   }

@@ -18,13 +18,9 @@ class DeepLinkService {
   StreamSubscription<Uri>? _sub;
 
   Future<void> start(GoRouter router) async {
-    try {
-      final initial = await _appLinks.getInitialLink();
-      if (initial != null) _handle(router, initial);
-    } catch (e) {
-      log.w('DeepLink initial link read failed: $e');
-    }
-
+    // Cold-start deep links are consumed by go_router's platform route parser
+    // and resolved via the router `redirect`. We only listen for warm links
+    // (new intents arriving while the app is running).
     _sub = _appLinks.uriLinkStream.listen(
       (uri) => _handle(router, uri),
       onError: (Object e) => log.w('DeepLink stream error: $e'),

@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/utils/logger.dart';
 import '../data/room_client.dart';
+import '../data/room_foreground_service.dart';
 import '../data/room_host_server.dart';
 import '../data/room_message.dart';
 import '../data/room_participant.dart';
@@ -32,10 +34,27 @@ class RoomController extends Notifier<RoomState> {
 
   @override
   RoomState build() {
+    RoomForegroundService.init();
+    FlutterForegroundTask.initCommunicationPort();
+    FlutterForegroundTask.addTaskDataCallback(_onTaskData);
     ref.onDispose(() {
+      FlutterForegroundTask.removeTaskDataCallback(_onTaskData);
       unawaited(_teardown());
     });
     return const RoomState();
+  }
+
+  void _onTaskData(Object data) {
+    if (data is Map && data['action'] == roomLeaveAction) {
+      unawaited(cancel());
+    }
+  }
+
+  String _buildNotificationText() {
+    final count = state.participants.length;
+    final host = state.hostParticipant?.name;
+    final role = state.isHost ? '내가 호스트' : (host != null ? '호스트: $host' : '게스트');
+    return '$count명 접속 · $role';
   }
 
   Future<void> startSearch({required String nickname}) async {
@@ -107,6 +126,25 @@ class RoomController extends Notifier<RoomState> {
     await _discovery?.stop();
     state = state.copyWith(phase: RoomPhase.locked);
     _recomputeRoster();
+    await _syncForegroundNotification(start: true);
+  }
+
+  bool _foregroundStarted = false;
+
+  Future<void> _syncForegroundNotification({required bool start}) async {
+    if (state.phase != RoomPhase.locked) return;
+    if (start || !_foregroundStarted) {
+      _foregroundStarted = true;
+      await RoomForegroundService.start(
+        title: '방서치 방 활성 중',
+        text: _buildNotificationText(),
+      );
+    } else {
+      await RoomForegroundService.update(
+        title: '방서치 방 활성 중',
+        text: _buildNotificationText(),
+      );
+    }
   }
 
   void shareTheme({
@@ -144,6 +182,11 @@ class RoomController extends Notifier<RoomState> {
     _peers
       ..clear()
       ..addEntries(peers.map((p) => MapEntry(p.id, p)));
+
+    // Once the room is locked, the host is committed. Discovery.stop() emits
+    // an empty peer list which would otherwise trigger spurious re-election
+    // and force guests to migrate back to themselves (dropping the WS).
+    if (state.phase == RoomPhase.locked) return;
 
     final ids = <String>{state.selfId, ..._peers.keys};
     final newHost = electHost(ids);
@@ -261,6 +304,7 @@ class RoomController extends Notifier<RoomState> {
             .map((p) => p.copyWith(isHost: p.id == hostId))
             .toList(growable: false),
       );
+      unawaited(_syncForegroundNotification(start: false));
       return;
     }
 
@@ -322,6 +366,9 @@ class RoomController extends Notifier<RoomState> {
   Future<void> _teardown() async {
     _notificationTimer?.cancel();
     _notificationTimer = null;
+
+    _foregroundStarted = false;
+    await RoomForegroundService.stop();
 
     await _discoverySub?.cancel();
     _discoverySub = null;

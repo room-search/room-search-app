@@ -21,6 +21,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/themes',
+    redirect: (context, state) {
+      final qp = state.uri.queryParameters;
+      final target = qp['target'];
+      final id = qp['id'];
+      if (target != null && id != null && id.isNotEmpty) {
+        if (target == 'theme') return '/themes/$id';
+        if (target == 'cafe') return '/cafes/$id';
+      }
+      final path = state.uri.path;
+      if (path.isEmpty || path == '/') return '/themes';
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/map',

@@ -31,12 +31,8 @@ class _RoomSearchPageState extends ConsumerState<RoomSearchPage> {
         title: const Text('함께 찾기'),
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),
-          onPressed: () async {
-            if (state.isActive) {
-              await ref.read(roomControllerProvider.notifier).cancel();
-            }
-            if (context.mounted) Navigator.of(context).maybePop();
-          },
+          tooltip: state.isActive ? '방 숨기기' : '닫기',
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
       ),
       body: SafeArea(
